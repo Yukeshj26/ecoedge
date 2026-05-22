@@ -6,6 +6,11 @@ app = Flask(__name__)
 CORS(app)
 
 
+@app.route("/")
+def home():
+    return "EcoEdge Anomaly Server Running"
+
+
 @app.route("/detect", methods=["POST"])
 def detect():
 
