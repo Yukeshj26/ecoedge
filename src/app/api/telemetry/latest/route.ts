@@ -31,7 +31,11 @@ export async function GET() {
       },
 
       async complete() {
-        const result: any = {};
+        const result: any = {
+          voltage: 0,
+          battery: 0,
+          power: 0,
+        };
 
         rows.forEach((r) => {
           result[r._field] = r._value;
