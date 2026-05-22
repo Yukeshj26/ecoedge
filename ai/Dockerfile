@@ -32,7 +32,7 @@ ENV SERVICE_NAME=predict
 
 # Start the selected service via a shell instruction that handles the environment variable
 CMD if [ "$SERVICE_NAME" = "anomaly" ]; then \
-        gunicorn -w 4 -b 0.0.0.0:5001 anomaly_server:app; \
+        gunicorn -w 1 --threads 4 -b 0.0.0.0:5001 anomaly_server:app; \
     else \
-        gunicorn -w 4 -b 0.0.0.0:5000 ai_server:app; \
+        gunicorn -w 1 --threads 4 -b 0.0.0.0:5000 ai_server:app; \
     fi

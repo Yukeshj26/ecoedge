@@ -55,7 +55,7 @@ X = df[[
 y = df["backup_time"]
 
 print("Training Random Forest Regressor on real energy features...")
-model = RandomForestRegressor(n_estimators=100, random_state=42)
+model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42)
 model.fit(X, y)
 
 # Dump to both files to maintain consistency across all model definitions
