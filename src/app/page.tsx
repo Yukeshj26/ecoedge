@@ -31,13 +31,23 @@ export default function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
   <StatCard
-    title="Voltage"
+    title="Voltage (AC)"
     value={
       latest
         ? `${latest.voltage}V`
         : "..."
     }
     color="text-cyan-600"
+  />
+
+  <StatCard
+    title="DC Voltage"
+    value={
+      latest
+        ? `${latest.dc_voltage !== undefined ? Number(latest.dc_voltage).toFixed(1) : "0.0"}V`
+        : "..."
+    }
+    color="text-indigo-600"
   />
 
   <StatCard

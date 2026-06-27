@@ -1,14 +1,15 @@
 [
   {
     "id": "conn-mqtt-primary",
-    "name": "Local MQTT Broker",
+    "name": "School Grid",
     "type": "MQTT Broker",
     "host": "localhost",
     "port": "1883",
     "topic": "ecoedge/device01/telemetry",
+    "device": "device01",
     "description": "Primary local MQTT broker used for real-time microgrid telemetry publishing.",
     "status": "Connected",
-    "creator": "admin@ecoedge.com",
+    "creator": "admin1inventory@gmail.com",
     "createdAt": "2026-05-21T08:00:00.000Z"
   },
   {
@@ -18,9 +19,10 @@
     "host": "http://localhost:8086",
     "port": "8086",
     "topic": "telemetry",
+    "device": "",
     "description": "Local time-series database storing aggregated telemetry history.",
     "status": "Connected",
-    "creator": "admin@ecoedge.com",
+    "creator": "admin1inventory@gmail.com",
     "createdAt": "2026-05-21T08:15:00.000Z"
   }
 ]

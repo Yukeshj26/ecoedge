@@ -1,0 +1,13 @@
+==================================================
+            LSTM MODEL TRAINING REPORT            
+==================================================
+Model File           : best_attention_lstm.keras
+Scaler File          : lstm_scaler.pkl
+Lookback Window Size : 48
+Evaluation Samples   : 29991
+--------------------------------------------------
+Mean Absolute Error (MAE)       : 15.9540 W
+Root Mean Squared Error (RMSE)  : 20.0039 W
+Mean Abs Percentage Error (MAPE): 9.0822 %
+R-squared (R2 Score)            : 0.8968
+==================================================

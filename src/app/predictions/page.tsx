@@ -25,6 +25,7 @@ type PredictionData = {
 
 export default function PredictionsPage() {
   const [activeTab, setActiveTab] = useState<"live" | "sandbox">("live");
+  const [selectedModel, setSelectedModel] = useState<"rf" | "lstm">("rf");
 
   // Live Telemetry state
   const [liveTelemetry, setLiveTelemetry] = useState<any>(null);
@@ -66,14 +67,33 @@ export default function PredictionsPage() {
 
     const fetchLivePrediction = async () => {
       try {
-        // Fetch latest telemetry
-        const res = await fetch("/api/telemetry/latest");
-        const json = await res.json();
-        
-        if (json.success && json.data) {
-          const telemetry = json.data;
-          setLiveTelemetry(telemetry);
-          setLivePrediction(telemetry.prediction ?? ((telemetry.battery / 100) * 12));
+        // Fetch telemetry, analytics, and prediction in parallel
+        const [telemetryRes, analyticsRes, predictionRes] = await Promise.all([
+          fetch("/api/telemetry/latest"),
+          fetch("/api/analytics/status"),
+          fetch(`/api/ai/prediction/latest?model=${selectedModel}`)
+        ]);
+
+        const [telemetryJson, analyticsJson, predictionJson] = await Promise.all([
+          telemetryRes.json(),
+          analyticsRes.json(),
+          predictionRes.json()
+        ]);
+
+        let mergedTelemetry: any = {};
+        if (telemetryJson.success && telemetryJson.data) {
+          mergedTelemetry = { ...mergedTelemetry, ...telemetryJson.data };
+        }
+        if (analyticsJson.success && analyticsJson.data) {
+          mergedTelemetry = { ...mergedTelemetry, ...analyticsJson.data };
+        }
+
+        setLiveTelemetry(mergedTelemetry);
+
+        if (predictionJson.success && predictionJson.data) {
+          setLivePrediction(predictionJson.data.backup_time);
+        } else {
+          setLivePrediction(mergedTelemetry.battery ? (mergedTelemetry.battery / 100) * 12 : 10);
         }
       } catch (err) {
         console.error("Live prediction fetch error:", err);
@@ -85,7 +105,7 @@ export default function PredictionsPage() {
     fetchLivePrediction();
     const interval = setInterval(fetchLivePrediction, 5000);
     return () => clearInterval(interval);
-  }, [activeTab]);
+  }, [activeTab, selectedModel]);
 
   // 2. Sandbox simulation prediction trigger
   useEffect(() => {
@@ -98,7 +118,11 @@ export default function PredictionsPage() {
         const response = await fetch(`${aiServerUrl}/predict`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(sandboxParams),
+          body: JSON.stringify({
+            ...sandboxParams,
+            model: selectedModel,
+            mode: "sandbox"
+          }),
         });
 
         if (response.ok) {
@@ -119,7 +143,7 @@ export default function PredictionsPage() {
 
     const delayDebounce = setTimeout(fetchSandboxPrediction, 300);
     return () => clearTimeout(delayDebounce);
-  }, [sandboxParams, activeTab]);
+  }, [sandboxParams, activeTab, selectedModel]);
 
   // Generate mock depletion curve for Recharts
   const generateDepletionData = (hours: number, batteryStart: number) => {
@@ -151,7 +175,7 @@ export default function PredictionsPage() {
 
       <section className="flex-1 p-8">
         {/* Header */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="mb-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-4xl font-extrabold mb-2 text-slate-900 tracking-tight">Predictive AI Insights</h1>
             <p className="text-slate-600 font-medium">
@@ -159,28 +183,54 @@ export default function PredictionsPage() {
             </p>
           </div>
 
-          {/* Mode Switcher Tabs */}
-          <div className="bg-slate-200/80 p-1.5 rounded-xl border border-slate-300/80 flex gap-1 shadow-inner">
-            <button
-              onClick={() => setActiveTab("live")}
-              className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-300 cursor-pointer ${
-                activeTab === "live"
-                  ? "bg-cyan-600 text-white shadow-md shadow-cyan-600/20"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-300/40"
-              }`}
-            >
-              Live Predictions
-            </button>
-            <button
-              onClick={() => setActiveTab("sandbox")}
-              className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-300 cursor-pointer ${
-                activeTab === "sandbox"
-                  ? "bg-orange-600 text-white shadow-md shadow-orange-600/20"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-300/40"
-              }`}
-            >
-              AI Simulation Sandbox
-            </button>
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+            {/* Model Selector Toggle */}
+            <div className="bg-white/60 backdrop-blur-sm p-1.5 rounded-xl border border-slate-200 flex gap-1 shadow-sm">
+              <button
+                onClick={() => setSelectedModel("rf")}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${
+                  selectedModel === "rf"
+                    ? "bg-slate-800 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                Random Forest
+              </button>
+              <button
+                onClick={() => setSelectedModel("lstm")}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-300 cursor-pointer ${
+                  selectedModel === "lstm"
+                    ? "bg-violet-600 text-white shadow-sm shadow-violet-600/20"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                LSTM Forecast
+              </button>
+            </div>
+
+            {/* Mode Switcher Tabs */}
+            <div className="bg-slate-200/80 p-1.5 rounded-xl border border-slate-300/80 flex gap-1 shadow-inner">
+              <button
+                onClick={() => setActiveTab("live")}
+                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-300 cursor-pointer ${
+                  activeTab === "live"
+                    ? "bg-cyan-600 text-white shadow-md shadow-cyan-600/20"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-300/40"
+                }`}
+              >
+                Live Predictions
+              </button>
+              <button
+                onClick={() => setActiveTab("sandbox")}
+                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-300 cursor-pointer ${
+                  activeTab === "sandbox"
+                    ? "bg-orange-600 text-white shadow-md shadow-orange-600/20"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-300/40"
+                }`}
+              >
+                AI Simulation Sandbox
+              </button>
+            </div>
           </div>
         </div>
 
@@ -191,12 +241,14 @@ export default function PredictionsPage() {
           <div className="bg-gradient-to-br from-white/90 to-cyan-100/60 backdrop-blur-md rounded-3xl p-8 border-2 border-slate-200/50 relative overflow-hidden flex flex-col justify-between shadow-md hover:shadow-lg transition-all duration-300">
             <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
             <div>
-              <span className="text-xs uppercase font-extrabold tracking-widest text-cyan-600">AI Model Output</span>
+              <span className={`text-xs uppercase font-extrabold tracking-widest ${selectedModel === "rf" ? "text-cyan-600" : "text-violet-600"}`}>
+                {selectedModel === "rf" ? "Random Forest Regressor" : "LSTM Recurrent Network"}
+              </span>
               <h2 className="text-xl font-bold mt-1 text-slate-800">Predicted Backup Time</h2>
               <p className="text-sm text-slate-500 font-medium mt-2">Remaining operation duration before critical shutdown.</p>
             </div>
             <div className="my-8">
-              <h3 className={`text-6xl font-black tracking-tight ${activeTab === "live" ? "text-cyan-600" : "text-orange-600"}`}>
+              <h3 className={`text-6xl font-black tracking-tight ${activeTab === "live" ? (selectedModel === "rf" ? "text-cyan-600" : "text-violet-600") : "text-orange-600"}`}>
                 {liveLoading && activeTab === "live" ? (
                   <span className="text-3xl text-slate-400 font-bold">Calculating...</span>
                 ) : (
@@ -437,12 +489,12 @@ export default function PredictionsPage() {
                       <linearGradient id="colorBattery" x1="0" y1="0" x2="0" y2="1">
                         <stop 
                           offset="5%" 
-                          stopColor={activeTab === "live" ? "#0891B2" : "#EA580C"} 
+                          stopColor={activeTab === "live" ? (selectedModel === "rf" ? "#0891B2" : "#7C3AED") : "#EA580C"} 
                           stopOpacity={0.4}
                         />
                         <stop 
                           offset="95%" 
-                          stopColor={activeTab === "live" ? "#0891B2" : "#EA580C"} 
+                          stopColor={activeTab === "live" ? (selectedModel === "rf" ? "#0891B2" : "#7C3AED") : "#EA580C"} 
                           stopOpacity={0.0}
                         />
                       </linearGradient>
@@ -463,7 +515,7 @@ export default function PredictionsPage() {
                     <Area 
                       type="monotone" 
                       dataKey="Battery" 
-                      stroke={activeTab === "live" ? "#0891B2" : "#EA580C"} 
+                      stroke={activeTab === "live" ? (selectedModel === "rf" ? "#0891B2" : "#7C3AED") : "#EA580C"} 
                       strokeWidth={4}
                       fillOpacity={1} 
                       fill="url(#colorBattery)" 

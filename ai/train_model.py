@@ -58,8 +58,7 @@ print("Training Random Forest Regressor on real energy features...")
 model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42)
 model.fit(X, y)
 
-# Dump to both files to maintain consistency across all model definitions
+# Save predictor model
 joblib.dump(model, "backup_predictor.pkl")
-joblib.dump(model, "backup_model.pkl")
 
-print("Backup prediction models trained and saved successfully on real dataset!")
+print("Backup prediction model trained and saved successfully on real dataset!")

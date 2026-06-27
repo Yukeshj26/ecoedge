@@ -76,35 +76,87 @@ export default function DigitalTwin({
 
       </div>
 
-      {/* Telemetry */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
+      {/* Physical Hardware Telemetry Ingest */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 mt-10">
 
-        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-4 rounded-xl shadow-sm">
-          <span className="text-sm text-slate-500 font-bold uppercase tracking-wider">Voltage:</span>
-          <div className="text-2xl mt-2 font-black text-slate-800">
-            {telemetry?.voltage}V
+        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md hover:border-slate-300 transition duration-300">
+          <span className="text-xs text-slate-500 font-extrabold uppercase tracking-wider">Mains AC Voltage</span>
+          <div className="text-3xl mt-2.5 font-black text-slate-800 flex items-baseline gap-1">
+            {telemetry?.voltage !== undefined ? telemetry.voltage : "--"}<span className="text-sm text-slate-400 font-bold">V</span>
           </div>
+          <span className="block text-[10px] text-indigo-650 font-bold mt-1 font-mono">ZMPT101B Sensor</span>
         </div>
 
-        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-4 rounded-xl shadow-sm">
-          <span className="text-sm text-slate-500 font-bold uppercase tracking-wider">Power:</span>
-          <div className="text-2xl mt-2 font-black text-slate-800">
-            {telemetry?.power}W
+        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md hover:border-slate-300 transition duration-300">
+          <span className="text-xs text-slate-500 font-extrabold uppercase tracking-wider">Load Consumption</span>
+          <div className="text-3xl mt-2.5 font-black text-slate-800 flex items-baseline gap-1">
+            {telemetry?.power !== undefined ? telemetry.power : "--"}<span className="text-sm text-slate-400 font-bold">W</span>
           </div>
+          <span className="block text-[10px] text-pink-650 font-bold mt-1 font-mono">Active Power Draw</span>
         </div>
 
-        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-4 rounded-xl shadow-sm">
-          <span className="text-sm text-slate-500 font-bold uppercase tracking-wider">CSI Score:</span>
-          <div className="text-2xl mt-2 font-black text-slate-800">
-            {telemetry?.csi}
+        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md hover:border-slate-300 transition duration-300">
+          <span className="text-xs text-slate-500 font-extrabold uppercase tracking-wider">Mains Grid Connection</span>
+          <div className="mt-2.5 flex items-center gap-2">
+            <span className={`w-3.5 h-3.5 rounded-full ${
+              telemetry?.gridPresent !== false 
+                ? "bg-green-500 shadow-[0_0_8px_#10B981]" 
+                : "bg-red-500 animate-pulse shadow-[0_0_8px_#EF4444]"
+            }`} />
+            <div className="text-xl font-black text-slate-800 uppercase tracking-tight">
+              {telemetry?.gridPresent !== false ? "GRID ONLINE" : "GRID POWER CUT"}
+            </div>
           </div>
+          <span className="block text-[10px] text-slate-400 font-bold mt-1 font-mono">PC817 Optosensor</span>
         </div>
 
-        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-4 rounded-xl shadow-sm">
-          <span className="text-sm text-slate-500 font-bold uppercase tracking-wider">Status:</span>
-          <div className="text-2xl mt-2 font-black text-slate-800">
-            {telemetry?.anomaly}
+        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md hover:border-slate-300 transition duration-300">
+          <span className="text-xs text-slate-500 font-extrabold uppercase tracking-wider">Thermal Relay State</span>
+          <div className="mt-2.5 flex items-center gap-2">
+            <span className={`w-3.5 h-3.5 rounded-full ${
+              telemetry?.relay 
+                ? "bg-cyan-500 shadow-[0_0_8px_#06B6D4] animate-pulse" 
+                : "bg-slate-400 shadow-inner"
+            }`} />
+            <div className="text-xl font-black text-slate-800 uppercase tracking-tight">
+              {telemetry?.relay ? "ACTIVE (ON)" : "INACTIVE (OFF)"}
+            </div>
           </div>
+          <span className="block text-[10px] text-slate-400 font-bold mt-1 font-mono">GPIO23 Trigger</span>
+        </div>
+
+        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md hover:border-slate-300 transition duration-300">
+          <span className="text-xs text-slate-500 font-extrabold uppercase tracking-wider">Mains Temp</span>
+          <div className="text-3xl mt-2.5 font-black text-slate-800 flex items-baseline gap-1">
+            {telemetry?.temperature !== undefined ? telemetry.temperature : "--"}<span className="text-sm text-slate-400 font-bold">°C</span>
+          </div>
+          <span className="block text-[10px] text-cyan-650 font-bold mt-1 font-mono">DHT22 Thermal sensor</span>
+        </div>
+
+        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md hover:border-slate-300 transition duration-300">
+          <span className="text-xs text-slate-500 font-extrabold uppercase tracking-wider">Air Humidity</span>
+          <div className="text-3xl mt-2.5 font-black text-slate-800 flex items-baseline gap-1">
+            {telemetry?.humidity !== undefined ? telemetry.humidity : "--"}<span className="text-sm text-slate-400 font-bold">%</span>
+          </div>
+          <span className="block text-[10px] text-blue-650 font-bold mt-1 font-mono">DHT22 Humidity sensor</span>
+        </div>
+
+        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md hover:border-slate-300 transition duration-300">
+          <span className="text-xs text-slate-500 font-extrabold uppercase tracking-wider">Operational Health</span>
+          <div className="text-3xl mt-2.5 font-black text-slate-800">
+            {telemetry?.csi !== undefined ? telemetry.csi : "100"}<span className="text-sm text-slate-400 font-bold">%</span>
+          </div>
+          <span className="block text-[10px] text-amber-650 font-bold mt-1 font-mono">Dynamic CSI Score</span>
+        </div>
+
+        <div className="bg-white/50 backdrop-blur-sm border border-slate-200/50 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md hover:border-slate-300 transition duration-300">
+          <span className="text-xs text-slate-500 font-extrabold uppercase tracking-wider">AI Operations Status</span>
+          <div className={`text-xl mt-2.5 font-black uppercase tracking-tight ${
+            telemetry?.status === "OPTIMAL" ? "text-green-600" : telemetry?.status === "WARNING" ? "text-amber-600" : "text-red-600"
+          }`}>
+            {telemetry?.status || "OPTIMAL"}
+          </div>
+          <span className="block text-[10px] text-slate-400 font-bold mt-1 font-mono">System Integrity</span>
         </div>
 
       </div>

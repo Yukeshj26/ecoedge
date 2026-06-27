@@ -39,3 +39,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python environment and cache
+env/
+__pycache__/
+*.pyc
+
+# ML models
+*.keras
+*.pkl
+*.npz
+
+# Data and reports
+ai/Renewable_energy_dataset_large.csv
+ai/*.png
+ai/csi_report_data.csv
+qc
+
+

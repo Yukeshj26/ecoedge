@@ -1,0 +1,170 @@
+[
+    {
+        "id": "tab-ecoedge",
+        "type": "tab",
+        "label": "EcoEdge Telemetry",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "mqtt-broker-config",
+        "type": "mqtt-broker",
+        "name": "Local MQTT Broker",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "compatmode": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
+    },
+    {
+        "id": "mqtt-in-node",
+        "type": "mqtt in",
+        "z": "tab-ecoedge",
+        "name": "Subscribe Telemetry",
+        "topic": "ecoedge/device01/telemetry",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "mqtt-broker-config",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 140,
+        "wires": [
+            [
+                "http-post-nextjs",
+                "func-format-influx"
+            ]
+        ]
+    },
+    {
+        "id": "http-post-nextjs",
+        "type": "http request",
+        "z": "tab-ecoedge",
+        "name": "POST Next.js Dashboard",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://localhost:3000/api/telemetry",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 490,
+        "y": 100,
+        "wires": [
+            [
+                "debug-nextjs"
+            ]
+        ]
+    },
+    {
+        "id": "func-format-influx",
+        "type": "function",
+        "z": "tab-ecoedge",
+        "name": "Format Influx Line Protocol",
+        "func": "const data = msg.payload || {};\n\nlet voltage = 0;\nlet battery = 80;\nlet power = 0;\nlet current = 0;\nlet temperature = 25.0;\nlet humidity = 50.0;\nlet relay = false;\nlet gridPresent = true;\nlet dc_voltage = 0;\n\n// 1. Detect and Normalize input source\nif (typeof data.ac_voltage !== 'undefined') {\n    // Payload from real ESP32\n    voltage = Number(data.ac_voltage || 0);\n    power = Number(data.ac_power || 0);\n    current = Number(data.ac_current || 0);\n    temperature = Number(data.temperature || 25.0);\n    humidity = Number(data.humidity || 50.0);\n    relay = Boolean(data.relay);\n    gridPresent = Boolean(data.gridPresent);\n    dc_voltage = Number(data.dc_voltage || 0);\n    \n    // Normalize battery status: map humidity range to battery state\n    battery = Number(humidity);\n} else {\n    // Payload from simulator\n    voltage = Number(data.voltage || 0);\n    battery = Number(data.battery || 0);\n    power = Number(data.power || 0);\n    current = Number(data.current || (voltage > 0 ? (power / voltage) : 0));\n    temperature = Number(data.temperature || 25.0);\n    humidity = Number(data.humidity || 50.0);\n    relay = Boolean(data.relay);\n    gridPresent = Boolean(data.gridPresent);\n    dc_voltage = Number(data.dc_voltage || (battery / 100 * 12.0));\n}\n\n// 2. Validation / Rejection Layer\nif (voltage < 0 || power < 0 || battery < 0 || battery > 100) {\n    node.warn(\"Telemetry rejected due to validation failure: \" + JSON.stringify({voltage, power, battery}));\n    return null;\n}\n\n// 3. Data Cleaning / Outlier filtering\nvoltage = Math.max(0, Math.min(300, voltage));\nbattery = Math.max(0, Math.min(100, battery));\npower = Math.max(0, Math.min(5000, power));\ncurrent = Math.max(0, Math.min(25, current));\ndc_voltage = Math.max(0, Math.min(50, dc_voltage));\n\n// Output 1: InfluxDB line protocol\nconst timestamp = Date.now();\nlet extraFields = \"\";\nif (typeof data.sent_at !== 'undefined') {\n    extraFields = \",sent_at=\" + data.sent_at;\n}\nconst line = `ecoedge,device=device01 voltage=${voltage.toFixed(2)},battery=${battery.toFixed(2)},power=${power.toFixed(2)},temperature=${temperature.toFixed(2)},humidity=${humidity.toFixed(2)},relay=${relay},gridPresent=${gridPresent},dc_voltage=${dc_voltage.toFixed(2)}${extraFields} ${timestamp}`;\n\nconst msg1 = {\n    payload: line,\n    headers: {\n        \"Authorization\": \"Token 03VDOT3tpzwm7--nywROtKR0SPBpWTRZmPiVla6jw_5tgaP8syQQxARVt8d74OnGh0afh6Z85xgM1gRc6XF8lQ==\",\n        \"Content-Type\": \"text/plain; charset=utf-8\"\n    }\n};\n\n// Output 2: Canonical Normalized JSON object\nconst normalizedObj = {\n    device_id: \"device01\",\n    timestamp: new Date().toISOString(),\n    voltage: Number(voltage.toFixed(2)),\n    current: Number(current.toFixed(2)),\n    power: Number(power.toFixed(2)),\n    battery: Number(battery.toFixed(2)),\n    dc_voltage: Number(dc_voltage.toFixed(2)),\n    battery_source: typeof data.ac_voltage !== 'undefined' ? \"humidity_derived\" : \"simulated\",\n    temperature: Number(temperature.toFixed(2)),\n    humidity: Number(humidity.toFixed(2)),\n    grid_present: gridPresent,\n    relay_status: relay,\n    source: typeof data.ac_voltage !== 'undefined' ? \"esp32\" : \"simulator\",\n    sent_at: typeof data.sent_at !== 'undefined' ? Number(data.sent_at) : undefined\n};\n\nconst msg2 = {\n    payload: normalizedObj\n};\n\nreturn [msg1, msg2];",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 200,
+        "wires": [
+            [
+                "http-post-influx"
+            ],
+            [
+                "mqtt-out-normalized"
+            ]
+        ]
+    },
+    {
+        "id": "http-post-influx",
+        "type": "http request",
+        "z": "tab-ecoedge",
+        "name": "POST InfluxDB write",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "http://localhost:8086/api/v2/write?org=EcoEdge&bucket=telemetry&precision=ms",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 780,
+        "y": 200,
+        "wires": [
+            [
+                "debug-influx"
+            ]
+        ]
+    },
+    {
+        "id": "debug-nextjs",
+        "type": "debug",
+        "z": "tab-ecoedge",
+        "name": "Next.js Response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 770,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "debug-influx",
+        "type": "debug",
+        "z": "tab-ecoedge",
+        "name": "InfluxDB Response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1020,
+        "y": 200
+    },
+    {
+        "id": "mqtt-out-normalized",
+        "type": "mqtt out",
+        "z": "tab-ecoedge",
+        "name": "Publish Normalized",
+        "topic": "ecoedge/normalized/device01",
+        "qos": "0",
+        "datatype": "auto",
+        "broker": "mqtt-broker-config",
+        "x": 780,
+        "y": 140,
+        "wires": []
+    }
+]

@@ -1,4 +1,6 @@
 import { alertsStore, Alert } from "./store";
+import fs from "fs";
+import path from "path";
 
 // Map of device ID to human readable grid names
 export const GRID_MAP: Record<string, string> = {
@@ -9,6 +11,32 @@ export const GRID_MAP: Record<string, string> = {
 
 export function getGridName(deviceId?: string): string {
   if (!deviceId) return "School Grid";
+
+  try {
+    const filePath = path.join(process.cwd(), "src/data/connections.json");
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, "utf-8");
+      const connections = JSON.parse(data);
+      
+      const conn = connections.find((c: any) => {
+        if (c.device && c.device.toLowerCase() === deviceId.toLowerCase()) {
+          return true;
+        }
+        if (c.topic && c.topic.includes("/")) {
+          const parts = c.topic.split("/");
+          return parts.some((p: string) => p.toLowerCase() === deviceId.toLowerCase());
+        }
+        return false;
+      });
+
+      if (conn) {
+        return conn.name;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to dynamically load grid name from connection registry:", err);
+  }
+
   return GRID_MAP[deviceId] || deviceId;
 }
 
@@ -42,14 +70,14 @@ export function processTelemetryAlerts(telemetry: any) {
     {
       type: "VOLTAGE_INSTABILITY",
       severity: "CRITICAL",
-      condition: voltage > 0 && (voltage < 180 || voltage > 260),
+      condition: voltage > 0 && (voltage < 165 || voltage > 255),
       message: `Critical voltage disruption: grid voltage spiked to a highly dangerous level at ${voltage.toFixed(1)}V.`,
       value: voltage
     },
     {
       type: "VOLTAGE_INSTABILITY",
       severity: "WARNING",
-      condition: voltage > 0 && ((voltage >= 180 && voltage < 210) || (voltage > 250 && voltage <= 260)),
+      condition: voltage > 0 && ((voltage >= 165 && voltage < 185) || (voltage > 245 && voltage <= 255)),
       message: `Grid voltage drop: voltage levels fluctuated to ${voltage.toFixed(1)}V.`,
       value: voltage
     },
@@ -84,7 +112,7 @@ export function processTelemetryAlerts(telemetry: any) {
     {
       type: "AI_ANOMALY",
       severity: "CRITICAL",
-      condition: aiAnomaly === "ANOMALY" || aiAnomaly === "VOLTAGE DROP | LOW BATTERY" || aiAnomaly === "VOLTAGE DROP" || aiAnomaly === "LOW BATTERY" || aiAnomaly === "POWER SURGE",
+      condition: !!aiAnomaly && aiAnomaly !== "NORMAL" && aiAnomaly !== "normal" && aiAnomaly !== "",
       message: `AI Anomaly: neural engine detected unexpected system telemetry pattern (${aiAnomaly}).`,
       value: power
     },

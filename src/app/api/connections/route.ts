@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, type, host, port, topic, description } = body;
+    const { name, type, host, port, topic, description, device } = body;
 
     if (!name || !type || !host || !port) {
       return NextResponse.json(
@@ -96,6 +96,7 @@ export async function POST(req: Request) {
       host,
       port,
       topic: topic || "N/A",
+      device: device || "",
       description: description || "No description provided.",
       status: "Connected",
       creator: sessionCheck.email!,
@@ -159,9 +160,9 @@ export async function DELETE(req: Request) {
     }
 
     const connections = await readConnections();
-    const exists = connections.some((c: any) => c.id === id);
+    const targetConnection = connections.find((c: any) => c.id === id);
 
-    if (!exists) {
+    if (!targetConnection) {
       return NextResponse.json(
         {
           success: false,
@@ -182,6 +183,17 @@ export async function DELETE(req: Request) {
         },
         { status: 500 }
       );
+    }
+
+    // Purge alerts associated with the deleted device grid name
+    try {
+      const { alertsStore } = require("@/lib/store");
+      if (Array.isArray(alertsStore)) {
+        const remainingAlerts = alertsStore.filter((a: any) => a.source !== targetConnection.name);
+        alertsStore.splice(0, alertsStore.length, ...remainingAlerts);
+      }
+    } catch (err) {
+      console.error("Failed to dynamically purge deleted grid alerts:", err);
     }
 
     return NextResponse.json({

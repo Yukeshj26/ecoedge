@@ -20,6 +20,9 @@ export let latestTelemetry = {
   relay: false,
   csi: 0,
   status: "WAITING",
+  temperature: 25.0,
+  humidity: 50.0,
+  gridPresent: true,
 };
 
 // In-memory store for tracking real-time and historical microgrid alerts

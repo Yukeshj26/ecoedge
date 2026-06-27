@@ -15,10 +15,6 @@ export default function Header() {
         <div className="bg-green-50/80 backdrop-blur-sm border-2 border-green-200/50 text-green-800 px-4 py-2 rounded-xl font-extrabold shadow-sm">
           MQTT Connected
         </div>
-
-        <div className="bg-cyan-50/80 backdrop-blur-sm border-2 border-cyan-200/50 text-cyan-800 px-4 py-2 rounded-xl font-extrabold shadow-sm">
-          CSI: 87
-        </div>
       </div>
     </header>
   );

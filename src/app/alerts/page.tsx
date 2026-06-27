@@ -41,6 +41,23 @@ export default function AlertsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "ACKNOWLEDGED" | "RESOLVED">("ALL");
   const [severityFilter, setSeverityFilter] = useState<"ALL" | "CRITICAL" | "WARNING" | "INFO">("ALL");
+  const [selectedDevice, setSelectedDevice] = useState<string>("ALL");
+  const [devices, setDevices] = useState<any[]>([]);
+
+  // Fetch registered devices (connections) to dynamically build Operations Hub selectors
+  const fetchDevices = async () => {
+    try {
+      const res = await fetch("/api/connections");
+      const json = await res.json();
+      if (json.success) {
+        // Filter connections representing grid devices
+        const registered = json.data.filter((c: any) => c.device || c.type === "MQTT Broker");
+        setDevices(registered);
+      }
+    } catch (err) {
+      console.error("Failed to fetch registered devices for Alerts selector:", err);
+    }
+  };
 
   // Fetch alerts from the API
   const fetchAlerts = async (silent = false) => {
@@ -61,10 +78,12 @@ export default function AlertsPage() {
 
   useEffect(() => {
     fetchAlerts();
+    fetchDevices();
     
-    // Set up polling interval to fetch live alerts every 3 seconds
+    // Set up polling interval to fetch live alerts and devices every 3 seconds
     const interval = setInterval(() => {
       fetchAlerts(true);
+      fetchDevices();
     }, 3000);
 
     return () => clearInterval(interval);
@@ -226,7 +245,13 @@ export default function AlertsPage() {
       matchesSeverity = alert.severity === severityFilter;
     }
 
-    return matchesSearch && matchesStatus && matchesSeverity;
+    // Device Filter
+    let matchesDevice = true;
+    if (selectedDevice !== "ALL") {
+      matchesDevice = alert.source === selectedDevice;
+    }
+
+    return matchesSearch && matchesStatus && matchesSeverity && matchesDevice;
   });
 
   return (
@@ -353,6 +378,139 @@ export default function AlertsPage() {
             </div>
           </div>
 
+        </div>
+
+        {/* Device Operations Hub */}
+        <div className="mb-8 animate-in fade-in slide-in-from-bottom-3 duration-500">
+          <h2 className="text-xl font-extrabold text-slate-800 mb-4 flex items-center gap-2 tracking-tight">
+            <Cpu className="w-5 h-5 text-cyan-600 animate-pulse" />
+            Device Operations Hub
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            {/* All Devices Selector Card */}
+            <div 
+              onClick={() => setSelectedDevice("ALL")}
+              className={`cursor-pointer rounded-2xl p-5 border-2 transition-all duration-300 flex flex-col justify-between shadow-sm relative overflow-hidden group ${
+                selectedDevice === "ALL" 
+                  ? "bg-gradient-to-br from-cyan-50/90 to-cyan-100/50 border-cyan-500 shadow-md shadow-cyan-500/5 scale-[1.01] ring-2 ring-cyan-500/10"
+                  : "bg-white/80 border-slate-200 hover:border-slate-350 hover:bg-slate-50 hover:scale-[1.01] hover:shadow-md"
+              }`}
+            >
+              <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/5 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform" />
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] uppercase font-black tracking-widest text-slate-500">All Microgrids</span>
+                <span className="bg-slate-100 border border-slate-200 text-slate-700 text-[10px] px-2.5 py-0.5 rounded-full font-bold">
+                  {alerts.filter(a => a.status === "ACTIVE" || a.status === "ACKNOWLEDGED").length} Active
+                </span>
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-800 text-lg leading-tight">System-wide Feed</h3>
+                <p className="text-[11px] text-slate-400 font-semibold mt-1">Aggregated alert and warning stream</p>
+              </div>
+            </div>
+
+            {/* Microgrid Device Cards */}
+            {devices.map((dev) => {
+              const name = dev.name;
+              const deviceId = dev.device || dev.id;
+              const deviceActiveAlerts = alerts.filter(a => a.source === name && (a.status === "ACTIVE" || a.status === "ACKNOWLEDGED"));
+              const devActiveCount = deviceActiveAlerts.length;
+              const devCriticalCount = deviceActiveAlerts.filter(a => a.severity === "CRITICAL").length;
+              const devWarningCount = deviceActiveAlerts.filter(a => a.severity === "WARNING").length;
+
+              let status: "OPTIMAL" | "WARNING" | "CRITICAL" = "OPTIMAL";
+              if (devCriticalCount > 0) {
+                status = "CRITICAL";
+              } else if (devWarningCount > 0) {
+                status = "WARNING";
+              }
+
+              const isSelected = selectedDevice === name;
+
+              // Setup dynamic styles based on operational status
+              let theme = {
+                cardBg: "from-green-50/80 to-emerald-50/30",
+                border: "border-green-300/60",
+                badgeBg: "bg-green-100 text-green-800 border-green-200",
+                badgeText: "OPTIMAL",
+                indicator: "bg-green-500",
+                glow: "shadow-green-500/5",
+                hoverBorder: "hover:border-green-400"
+              };
+
+              if (status === "CRITICAL") {
+                theme = {
+                  cardBg: "from-red-50/80 to-rose-50/30",
+                  border: "border-red-300/60",
+                  badgeBg: "bg-red-100 text-red-800 border-red-200 animate-pulse",
+                  badgeText: "CRITICAL FAULT",
+                  indicator: "bg-red-500",
+                  glow: "shadow-red-500/10",
+                  hoverBorder: "hover:border-red-400"
+                };
+              } else if (status === "WARNING") {
+                theme = {
+                  cardBg: "from-amber-50/80 to-orange-50/30",
+                  border: "border-amber-300/60",
+                  badgeBg: "bg-amber-100 text-amber-800 border-amber-200",
+                  badgeText: "WARNINGS ACTIVE",
+                  indicator: "bg-amber-500",
+                  glow: "shadow-yellow-500/10",
+                  hoverBorder: "hover:border-amber-400"
+                };
+              }
+
+              return (
+                <div 
+                  key={name}
+                  onClick={() => setSelectedDevice(isSelected ? "ALL" : name)}
+                  className={`cursor-pointer rounded-2xl p-5 border-2 transition-all duration-300 flex flex-col justify-between shadow-sm relative overflow-hidden group ${theme.glow} ${
+                    isSelected 
+                      ? "bg-gradient-to-br from-cyan-50/90 to-cyan-100/50 border-cyan-500 shadow-md ring-2 ring-cyan-500/10 scale-[1.01]"
+                      : `bg-gradient-to-br ${theme.cardBg} ${theme.border} ${theme.hoverBorder} hover:scale-[1.01] hover:shadow-md`
+                  }`}
+                >
+                  <div className={`absolute top-0 right-0 w-20 h-20 rounded-full blur-xl pointer-events-none transition-transform group-hover:scale-125 ${
+                    status === "CRITICAL" ? "bg-red-500/5" : status === "WARNING" ? "bg-amber-500/5" : "bg-green-500/5"
+                  }`} />
+                  
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] uppercase font-black tracking-widest text-slate-500 font-mono">{deviceId}</span>
+                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${theme.badgeBg}`}>
+                      {theme.badgeText}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="font-extrabold text-slate-800 text-lg leading-tight flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        {status === "CRITICAL" && (
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        )}
+                        <span className={`relative inline-flex rounded-full h-2 w-2 ${theme.indicator}`}></span>
+                      </span>
+                      {name}
+                    </h3>
+                    
+                    <div className="flex items-center justify-between mt-3 text-xs border-t border-slate-100/60 pt-3">
+                      <span className="text-slate-500 font-bold">Active Alerts</span>
+                      <span className={`font-black font-mono text-sm px-2 py-0.5 rounded-md ${
+                        devActiveCount > 0 
+                          ? status === "CRITICAL" 
+                            ? "bg-red-100 text-red-800" 
+                            : "bg-amber-100 text-amber-800"
+                          : "bg-green-100 text-green-800"
+                      }`}>
+                        {devActiveCount}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+          </div>
         </div>
 
         {/* Filters and Control Board */}

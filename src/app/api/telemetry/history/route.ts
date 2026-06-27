@@ -8,6 +8,7 @@ const WINDOW_CONFIG: Record<string, { range: string; every: string }> = {
   "5m":  { range: "-5m",  every: "6s"  },
   "15m": { range: "-15m", every: "18s" },
   "30m": { range: "-30m", every: "36s" },
+  "1h":  { range: "-1h",  every: "72s" },
 };
 
 export async function GET(request: NextRequest) {
