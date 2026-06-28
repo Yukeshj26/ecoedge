@@ -11,7 +11,9 @@ export default function Home() {
 
   const {
     latest,
-    history
+    history,
+    isSimulating,
+    toggleSimulation
   } = useTelemetry();
 
   const prediction =
@@ -26,7 +28,7 @@ export default function Home() {
 
       <section className="flex-1 p-8">
 
-        <Header />
+        <Header isSimulating={isSimulating} toggleSimulation={toggleSimulation} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
