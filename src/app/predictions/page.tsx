@@ -65,6 +65,41 @@ export default function PredictionsPage() {
   useEffect(() => {
     if (activeTab !== "live") return;
 
+    const isSimulating = typeof window !== "undefined" && localStorage.getItem("ecoedge_demo_simulation") === "true";
+    if (isSimulating) {
+      const runSim = () => {
+        const power_val = Math.max(50, Math.round(180.0 + Math.sin(Date.now() / 8000) * 60 + (Math.random() - 0.5) * 10));
+        const battery_val = Math.max(20, Math.min(100, Math.round(75.0 + Math.sin(Date.now() / 30000) * 15)));
+        const volt_val = Number((225.0 + Math.sin(Date.now() / 5000) * 5 + (Math.random() - 0.5) * 1.5).toFixed(1));
+        const solar_val = Math.round(power_val * 0.8);
+        const load_val = Math.round(power_val * 1.1);
+        const csi_val = Math.round(75 + (battery_val / 100 * 15) + (solar_val > 150 ? 10 : 0));
+        
+        const simData = {
+          voltage: volt_val,
+          dc_voltage: Number((12.2 + Math.sin(Date.now() / 15000) * 0.5).toFixed(1)),
+          battery: battery_val,
+          power: power_val,
+          current: Number((power_val / volt_val).toFixed(2)),
+          temperature: Number((24.5 + Math.sin(Date.now() / 20000) * 1.0).toFixed(1)),
+          humidity: Number((52.0 + Math.cos(Date.now() / 20000) * 2.0).toFixed(1)),
+          relay: Math.sin(Date.now() / 10000) > 0.5,
+          gridPresent: true,
+          solar: solar_val,
+          load: load_val,
+          csi: csi_val,
+          anomaly: "NORMAL",
+          maintenance: { risk: 15, status: "LOW" },
+        };
+        setLiveTelemetry(simData);
+        setLivePrediction(Number(((battery_val / 100 * 2000) / power_val).toFixed(2)));
+        setLiveLoading(false);
+      };
+      runSim();
+      const interval = setInterval(runSim, 3000);
+      return () => clearInterval(interval);
+    }
+
     const fetchLivePrediction = async () => {
       try {
         // Fetch telemetry, analytics, and prediction in parallel

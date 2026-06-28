@@ -56,6 +56,59 @@ export default function AnalyticsPage() {
   });
 
   useEffect(() => {
+    const isSimulating = typeof window !== "undefined" && localStorage.getItem("ecoedge_demo_simulation") === "true";
+    if (isSimulating) {
+      const runSim = () => {
+        const now = Date.now();
+        const finalData = [];
+        const csiData = [];
+        
+        // Generate MAX_POINTS historical data points
+        for (let i = MAX_POINTS - 1; i >= 0; i--) {
+          const timeOffset = now - i * 15000; // 15s interval
+          const power_val = Math.max(50, Math.round(180.0 + Math.sin(timeOffset / 120000) * 60 + (Math.sin(timeOffset / 15000) * 15)));
+          const volt_val = Number((225.0 + Math.sin(timeOffset / 60000) * 5 + Math.sin(timeOffset / 10000) * 1).toFixed(1));
+          const battery_val = Math.max(20, Math.min(100, Math.round(75.0 + Math.sin(timeOffset / 600000) * 15)));
+          const csi_val = Math.round(75 + (battery_val / 100 * 15) + (power_val < 150 ? 5 : 0));
+          const risk_val = Math.round(15 + Math.sin(timeOffset / 300000) * 5);
+          
+          finalData.push({
+            time: timeOffset,
+            power: power_val,
+            voltage: volt_val,
+            battery: battery_val
+          });
+          
+          csiData.push({
+            time: timeOffset,
+            csi: csi_val,
+            maintenance_risk: risk_val
+          });
+        }
+        
+        setHistory(finalData);
+        setCsiHistory(csiData);
+        
+        // Compute stats
+        const avgPower = finalData.reduce((a, b) => a + b.power, 0) / finalData.length;
+        const avgVoltage = finalData.reduce((a, b) => a + b.voltage, 0) / finalData.length;
+        const avgBattery = finalData.reduce((a, b) => a + b.battery, 0) / finalData.length;
+        const peakPower = Math.max(...finalData.map((d) => d.power));
+        setStats({ avgPower, avgVoltage, avgBattery, peakPower });
+        
+        const csiValues = csiData.map((d: any) => d.csi);
+        const current = csiValues[csiValues.length - 1];
+        const average = csiValues.reduce((a: number, b: number) => a + b, 0) / csiValues.length;
+        const min = Math.min(...csiValues);
+        const max = Math.max(...csiValues);
+        setCsiStats({ current, average, min, max });
+      };
+      
+      runSim();
+      const interval = setInterval(runSim, 5000);
+      return () => clearInterval(interval);
+    }
+
     const fetchAnalytics = async () => {
       try {
         // Fetch telemetry history and CSI history in parallel
