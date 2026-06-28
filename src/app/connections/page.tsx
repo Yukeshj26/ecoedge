@@ -448,12 +448,7 @@ export default function ConnectionsPage() {
                 </button>
               </form>
 
-              <div className="mt-8 pt-6 border-t-2 border-slate-100">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-cyan-50 text-cyan-800 border-2 border-cyan-200/60 text-center">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-600 animate-pulse shrink-0" />
-                  Operator Directory: <strong className="text-cyan-900 font-extrabold ml-1">admin@ecoedge.com</strong> or <strong className="text-cyan-900 font-extrabold">admin1inventory@gmail.com</strong>
-                </span>
-              </div>
+
             </div>
           </div>
         )}
